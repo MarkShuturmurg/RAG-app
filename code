@@ -1,0 +1,35 @@
+from langchain import OpenAI, Text
+from langchain.chains import RetrievalChain, GenerationChain
+from langchain.vectorstores import FAISS
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.chains import RAGChain
+import os
+
+# Load 10-K Reports
+def load_10k_reports(directory):
+    documents = []
+    for filename in os.listdir(directory):
+        if filename.endswith(".txt"):
+            with open(os.path.join(directory, filename), 'r') as file:
+                text = file.read()
+                documents.append(Text(text))
+    return documents
+
+# Initialize the environment
+documents = load_10k_reports('path_to_10k_reports')
+embeddings = OpenAIEmbeddings(model_name='text-embedding-ada-002')
+vector_store = FAISS.from_documents(documents, embeddings)
+retriever = vector_store.as_retriever()
+retrieval_chain = RetrievalChain(retriever=retriever)
+
+openai_api_key = 'your_openai_api_key'
+llm = OpenAI(api_key=openai_api_key, model_name='text-davinci-003')
+generation_chain = GenerationChain(llm=llm)
+
+# Create the RAG Chain
+rag_chain = RAGChain(retrieval_chain=retrieval_chain, generation_chain=generation_chain)
+
+# Query the application
+query = "Summarize the financial performance of Company XYZ for the year 2023."
+response = rag_chain.run(query)
+print(response)
